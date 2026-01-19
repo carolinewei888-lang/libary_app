@@ -42,22 +42,21 @@ npm install
 
 This application uses the **Google Gemini API** for its smart features (auto-fill, recommendations, deep dives).
 
-**Option A: Running WITHOUT a Google AI Studio Account**
-You can run the application immediately!
-- The core features (Browsing, Adding books manually, Borrowing, Returning, Wishlist) will work 100%.
-- AI features (Smart Fill, Recommendations) will fail gracefully or return placeholder text.
+**Important for Vite/Vercel Users:**
+The API key must be prefixed with `VITE_` to be accessible in the browser.
 
-**Option B: Running WITH AI Features**
-To enable the "Brain" of the library:
 1. Get a free API key from [Google AI Studio](https://aistudio.google.com/).
 2. Create a file named `.env` in the root directory of the project.
 3. Add your key exactly as shown below:
 
 ```env
-API_KEY=your_google_api_key_here
+VITE_GOOGLE_API_KEY=your_google_api_key_here
 ```
 
-*Note: The application code looks for `process.env.API_KEY`.*
+**For Vercel Deployment:**
+Go to Settings -> Environment Variables and add:
+- Key: `VITE_GOOGLE_API_KEY`
+- Value: `your_actual_api_key_string`
 
 ### 4. Running the App
 

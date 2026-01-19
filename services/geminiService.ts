@@ -1,9 +1,16 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Book, BookDeepDetails } from "../types";
 
+// Access API Key using Vite's import.meta.env
+// The variable in .env or Vercel must be named VITE_GOOGLE_API_KEY
+const getApiKey = (): string => {
+  // @ts-ignore - Handling Vite types without explicit declaration file
+  return import.meta.env.VITE_GOOGLE_API_KEY || '';
+};
+
 export const generateBookMetadata = async (title: string): Promise<{ author: string, description: string, category: string, isbn: string } | null> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Generate real-world metadata for a book titled "${title}". 
@@ -46,7 +53,7 @@ export const generateBookMetadata = async (title: string): Promise<{ author: str
 
 export const recommendBooks = async (books: Book[], mood: string): Promise<{ bookId: string, reason: string }[]> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         // Simplified list for token efficiency
         const bookListSimple = books
             .filter(b => b.status === 'AVAILABLE')
@@ -91,7 +98,7 @@ export const recommendBooks = async (books: Book[], mood: string): Promise<{ boo
 
 export const getBookDeepDive = async (title: string, author: string): Promise<BookDeepDetails> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
             contents: `For the book "${title}" by ${author}, provide a deep dive analysis.
