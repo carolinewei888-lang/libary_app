@@ -1,3 +1,4 @@
+
 export type UserRole = 'ADMIN' | 'USER';
 
 export interface User {
@@ -24,6 +25,7 @@ export interface Book {
   // New Decision Aids
   isTrending?: boolean;
   isRareFind?: boolean;
+  rating?: number; // 0-5 stars
 }
 
 export interface BookDeepDetails {

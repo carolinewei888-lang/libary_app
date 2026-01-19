@@ -11,7 +11,7 @@ import { BorrowModal } from '../components/BorrowModal';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { RestoreModal } from '../components/RestoreModal';
 import { BookDetailsModal } from '../components/BookDetailsModal';
-import { Plus, Search, LogOut, Library, Sparkles, Heart, BookOpen, Inbox, BookOpenCheck, Trash2, X, CheckSquare, RotateCcw, ArrowUpDown, ArrowLeft } from 'lucide-react';
+import { Plus, Search, LogOut, Library, Sparkles, Heart, BookOpen, Inbox, BookOpenCheck, Trash2, X, CheckSquare, RotateCcw, ArrowUpDown, ArrowLeft, ChevronDown, Check } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
@@ -86,7 +86,21 @@ const isFuzzyMatch = (text: string, query: string): boolean => {
     });
 };
 
-type SortOption = 'ALPHA' | 'NEWEST' | 'POPULAR';
+type SortOption = 'POPULAR' | 'TRENDING' | 'RATING' | 'NEWEST' | 'ALPHA';
+
+// Helper to generate a consistent pseudo-rating if missing (for demo purposes)
+const getBookRating = (book: Book): number => {
+    if (book.rating) return book.rating;
+    
+    // Deterministic hash based on ID to generate a float between 3.5 and 4.9
+    let hash = 0;
+    for (let i = 0; i < book.id.length; i++) {
+        hash = ((hash << 5) - hash) + book.id.charCodeAt(i);
+        hash |= 0;
+    }
+    const normalized = Math.abs(hash) % 15; // 0-14
+    return 3.5 + (normalized / 10);
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogout }) => {
   const [user, setUser] = useState<User>(initialUser);
@@ -94,11 +108,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
   const [deletedCount, setDeletedCount] = useState(0);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'BROWSE' | 'WISHLIST' | 'MY_BOOKS'>('BROWSE');
-  const [sortOption, setSortOption] = useState<SortOption>('ALPHA');
+  const [sortOption, setSortOption] = useState<SortOption>('POPULAR');
+  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   
   // Selection Mode State (Admin Only)
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
+
+  // Navigation Menu State
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -146,6 +164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
 
     let result = books;
 
+    // Apply Tab Filtering
     if (activeTab === 'WISHLIST') {
         result = books.filter(b => searchMatches(b) && user.interestedBookIds.includes(b.id));
     } else if (activeTab === 'MY_BOOKS') {
@@ -155,25 +174,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
         result = books.filter(searchMatches);
     }
 
+    // Apply "Available Only" Filter
+    // Note: We don't apply this in "My Books" because borrowed books are by definition unavailable to others, 
+    // and if I'm looking at my books, I know I have them.
+    if (showAvailableOnly && activeTab !== 'MY_BOOKS') {
+        result = result.filter(b => b.status === 'AVAILABLE');
+    }
+
     // 2. Sort Logic
     return result.sort((a, b) => {
         if (sortOption === 'ALPHA') {
             return a.title.localeCompare(b.title);
         } else if (sortOption === 'NEWEST') {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        } else if (sortOption === 'RATING') {
+            // Sort by Rating Descending
+            return getBookRating(b) - getBookRating(a);
+        } else if (sortOption === 'TRENDING') {
+             // Priority: Trending flag (Wishlist logic simulation)
+             const getScore = (book: Book) => {
+                 if (book.isTrending) return 2;
+                 if (user.interestedBookIds.includes(book.id)) return 1;
+                 return 0;
+             }
+             return getScore(b) - getScore(a);
         } else if (sortOption === 'POPULAR') {
-            // Priority: Trending -> Borrowed -> Available
+            // Default "Most Popular": Combined Clicks (Trending) + Reads (Borrowed) + Rating
+            // High weight to Borrowed (Active Reads) and Trending (Hot)
             const getScore = (book: Book) => {
-                if (book.isTrending) return 3;
-                if (book.status === 'BORROWED') return 2;
-                return 1;
+                let score = 0;
+                if (book.status === 'BORROWED') score += 5; // High activity
+                if (book.isTrending) score += 3; // Hot topic
+                score += (getBookRating(book) / 2); // Rating influence (approx 2.5 pts max)
+                return score;
             }
             return getScore(b) - getScore(a);
         }
         return 0;
     });
 
-  }, [books, search, activeTab, user, sortOption]);
+  }, [books, search, activeTab, user, sortOption, showAvailableOnly]);
 
   const handleAddBook = (book: Book) => {
     mockDb.addBook(book);
@@ -313,18 +353,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       {/* Navbar */}
       <header className="sticky top-0 z-30 w-full border-b bg-primary text-primary-foreground shadow-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 font-bold text-xl">
-                <Library className="h-6 w-6" />
-                <span className="hidden sm:inline">Libri</span>
-            </div>
-            <span className="text-[10px] sm:text-xs font-light opacity-90 tracking-wide hidden md:block">
-                Personal and financial growth library powered by AI
-            </span>
+          
+          {/* LOGO & NAVIGATION MENU AREA */}
+          <div className="relative">
+             <button 
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="flex flex-col items-start hover:bg-white/10 p-2 -ml-2 rounded-lg transition-colors text-left focus:outline-none"
+             >
+                <div className="flex items-center gap-2 font-bold text-xl">
+                    <Library className="h-6 w-6" />
+                    <span className="hidden sm:inline">Libri</span>
+                    <ChevronDown className={`h-4 w-4 opacity-70 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                </div>
+                <span className="text-[10px] sm:text-xs font-light opacity-90 tracking-wide hidden md:block">
+                    Personal and financial growth library powered by AI
+                </span>
+             </button>
+
+             {/* Dropdown Menu */}
+             {isMenuOpen && (
+                <>
+                    {/* Backdrop to handle click outside */}
+                    <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsMenuOpen(false)}></div>
+                    
+                    {/* Menu Items */}
+                    <div className="absolute top-full left-0 mt-1 w-64 rounded-xl border bg-white text-slate-900 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200 overflow-hidden ring-1 ring-black/5">
+                        <div className="p-1.5 space-y-0.5">
+                            <button
+                                onClick={() => { setActiveTab('BROWSE'); setIsSelectionMode(false); setIsMenuOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'BROWSE' ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-700'}`}
+                            >
+                                <Library className="h-4 w-4" />
+                                Browse Library
+                            </button>
+                            
+                            <button
+                                onClick={() => { setActiveTab('WISHLIST'); setIsSelectionMode(false); setIsMenuOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'WISHLIST' ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-700'}`}
+                            >
+                                <Heart className="h-4 w-4" />
+                                My Wishlist
+                                {wishlistCount > 0 && <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold">{wishlistCount}</span>}
+                            </button>
+                            
+                            <button
+                                onClick={() => { setActiveTab('MY_BOOKS'); setIsSelectionMode(false); setIsMenuOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === 'MY_BOOKS' ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-700'}`}
+                            >
+                                <BookOpen className="h-4 w-4" />
+                                My Borrowed
+                                {myBooksCount > 0 && <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold">{myBooksCount}</span>}
+                            </button>
+                            
+                            <div className="h-px bg-slate-200 my-1 mx-2" />
+                            
+                            <button
+                                onClick={() => { setIsRecModalOpen(true); setIsMenuOpen(false); }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg hover:bg-indigo-50 text-indigo-600 transition-colors group"
+                            >
+                                <Sparkles className="h-4 w-4 group-hover:text-indigo-600" />
+                                AI Suggest
+                            </button>
+                        </div>
+                    </div>
+                </>
+             )}
           </div>
           
-          {/* Removed Navbar Tabs from Header */}
-
+          {/* User Profile */}
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2 text-sm font-medium">
                {user.name}
@@ -370,13 +466,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                         {/* Sort Dropdown */}
                         <div className="relative inline-block w-full sm:w-auto">
                             <select
-                                className="w-full sm:w-[180px] h-10 pl-3 pr-8 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                                className="w-full sm:w-[220px] h-10 pl-3 pr-8 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer hover:bg-accent hover:text-accent-foreground"
                                 value={sortOption}
                                 onChange={(e) => setSortOption(e.target.value as SortOption)}
                             >
-                                <option value="ALPHA">Sort: A to Z</option>
-                                <option value="NEWEST">Sort: Newest</option>
-                                <option value="POPULAR">Sort: Most Popular</option>
+                                <option value="POPULAR">Most Popular (Default)</option>
+                                <option value="TRENDING">Trending / Most Saved</option>
+                                <option value="RATING">Highest Rated</option>
+                                <option value="NEWEST">New Arrivals</option>
+                                <option value="ALPHA">Title (A-Z)</option>
                             </select>
                             <ArrowUpDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                         </div>
@@ -472,6 +570,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                 My Borrowed {myBooksCount > 0 && `(${myBooksCount})`}
             </Button>
             
+            {/* Available Only Filter Toggle - Moved here */}
+            {activeTab !== 'MY_BOOKS' && (
+                 <button
+                    onClick={() => setShowAvailableOnly(!showAvailableOnly)}
+                    className={`
+                        inline-flex items-center justify-center rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 px-3 border border-dashed
+                        ${showAvailableOnly 
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
+                            : 'bg-transparent border-slate-300 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                        }
+                    `}
+                >
+                    <div className={`flex items-center justify-center h-3.5 w-3.5 rounded-sm border mr-2 ${showAvailableOnly ? 'bg-emerald-600 border-emerald-600' : 'border-slate-400'}`}>
+                        {showAvailableOnly && <Check className="h-2.5 w-2.5 text-white" />}
+                    </div>
+                    Available Only
+                </button>
+            )}
+
             {/* Back to All Books (Clear Search) */}
             {search && (
                  <Button
@@ -572,6 +689,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                     <Search className="h-12 w-12 mb-4 opacity-20" />
                     <p className="text-lg">No books found.</p>
                     <p className="text-sm">Try adjusting your search query (we support fuzzy matching for typos).</p>
+                    {showAvailableOnly && (
+                        <Button variant="link" onClick={() => setShowAvailableOnly(false)} className="mt-2">
+                            Show borrowed books
+                        </Button>
+                    )}
                  </>
              )}
           </div>
