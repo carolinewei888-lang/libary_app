@@ -11,7 +11,7 @@ import { BorrowModal } from '../components/BorrowModal';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { RestoreModal } from '../components/RestoreModal';
 import { BookDetailsModal } from '../components/BookDetailsModal';
-import { Plus, Search, LogOut, Library, Sparkles, Heart, BookOpen, Inbox, BookOpenCheck, Trash2, X, CheckSquare, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, LogOut, Library, Sparkles, Heart, BookOpen, Inbox, BookOpenCheck, Trash2, X, CheckSquare, RotateCcw, ArrowUpDown, ArrowLeft } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
@@ -471,6 +471,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
             >
                 My Borrowed {myBooksCount > 0 && `(${myBooksCount})`}
             </Button>
+            
+            {/* Back to All Books (Clear Search) */}
+            {search && (
+                 <Button
+                    variant="ghost"
+                    onClick={() => setSearch('')}
+                    className="rounded-full text-muted-foreground hover:text-primary border border-dashed border-primary/30 hover:border-primary bg-background ml-auto sm:ml-0 h-8 sm:h-9"
+                    size="sm"
+                >
+                    <ArrowLeft className="mr-2 h-3 w-3" />
+                    Back to All Books
+                </Button>
+            )}
         </div>
 
         {/* Search Bar (Global across tabs) */}

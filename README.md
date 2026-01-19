@@ -1,20 +1,90 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# Libri - AI Library Manager
 
-This contains everything you need to run your app locally.
+Libri is a modern, AI-powered library management system designed for high-growth individuals. It helps curate personal wisdom, manage financial strategies, and provides intelligent book recommendations using Google's Gemini models.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1D2yuQOCp8p4T1I6H5E3aPYNjglioJg55
+## 🚀 Live Demo
 
-## Run Locally
+**Access the deployed application here:**
+👉 [**https://libary-app-valsoft-6h18svkew-carolinewei888-langs-projects.vercel.app**](https://libary-app-valsoft-6h18svkew-carolinewei888-langs-projects.vercel.app)
 
-**Prerequisites:**  Node.js
+---
 
+## ✨ Features
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Smart Catalog:** Manage books with status tracking (Available/Borrowed).
+- **AI-Powered Entry:** Auto-fill book details (Description, Category, ISBN) using Gemini AI just by typing a title.
+- **AI Librarian:** Get personalized book recommendations based on your current mood or goals.
+- **Deep Dive:** View AI-generated core concepts, estimated reading time, and "Why you should read this" analysis.
+- **User Roles:**
+  - **Admin:** Add/Delete books, manage inventory.
+  - **Borrower:** Browse, Wishlist, and Checkout books.
+- **Responsive Design:** Beautiful UI built with Tailwind CSS.
+
+---
+
+## 🛠️ Local Development Setup
+
+If you want to run this project locally, follow these steps.
+
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) (v16 or higher)
+- npm or yarn
+
+### 2. Installation
+Clone the repository (or download the source code) and install dependencies:
+
+```bash
+npm install
+```
+
+### 3. Environment Configuration (API Key)
+
+This application uses the **Google Gemini API** for its smart features (auto-fill, recommendations, deep dives).
+
+**Option A: Running WITHOUT a Google AI Studio Account**
+You can run the application immediately!
+- The core features (Browsing, Adding books manually, Borrowing, Returning, Wishlist) will work 100%.
+- AI features (Smart Fill, Recommendations) will fail gracefully or return placeholder text.
+
+**Option B: Running WITH AI Features**
+To enable the "Brain" of the library:
+1. Get a free API key from [Google AI Studio](https://aistudio.google.com/).
+2. Create a file named `.env` in the root directory of the project.
+3. Add your key exactly as shown below:
+
+```env
+API_KEY=your_google_api_key_here
+```
+
+*Note: The application code looks for `process.env.API_KEY`.*
+
+### 4. Running the App
+
+Start the development server:
+
+```bash
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
+---
+
+## 🔑 Default Accounts
+
+The app uses a mock database (LocalStorage). You can log in using these simulated roles:
+
+1. **Administrator**
+   - Has full access to add/edit/delete books.
+2. **Borrower (User)**
+   - Can browse, add to wishlist, and borrow books.
+
+---
+
+## 📦 Tech Stack
+
+- **Frontend:** React, TypeScript
+- **Styling:** Tailwind CSS, Lucide React (Icons)
+- **AI Integration:** Google GenAI SDK (`@google/genai`)
+- **Data:** LocalStorage Mock DB (Persists data in your browser for demo purposes)
